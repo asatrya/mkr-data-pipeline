@@ -28,6 +28,8 @@ venv
 
 # Local Airflow
 unittests.cfg
+airflow.db
+airflow-pipeline/logs
 
 # Minio
 .minio.sys

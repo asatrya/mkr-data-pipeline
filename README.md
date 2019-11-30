@@ -31,7 +31,26 @@ For local development purpose, you can setup local Airflow with other dependenci
 1. Set Airflow Home Directory
 
    ```sh
+   cd airflow-pipeline/
    export AIRFLOW_HOME=$PWD
+   ```
+
+1. Set `FERNET_KEY`
+
+   ```sh
+   export FERNET_KEY=Zp3FDPCdBoq03Begm2RJOL_3obEwrleTdkS02UNgV48=
+   ```
+
+1. Change `airflow.cfg`
+
+   For local develpoment, it's enough to use SequentialExecutor, so change corresponding line to be:
+
+   ```txt
+   ...
+   executor = SequentialExecutor
+   ...
+   sql_alchemy_conn = sqlite:///$AIRFLOW_HOME/airflow.db
+   ...
    ```
 
 1. Setup and activate virtual environment
@@ -46,4 +65,16 @@ For local development purpose, you can setup local Airflow with other dependenci
    ```sh
    sudo apt install libpq-dev python-dev
    pip install -r dags/requirements.txt
+   ```
+
+1. Initialize Airflow database
+
+   ```sh
+   airflow initdb
+   ```
+
+1. Validate Airflow installation
+
+   ```sh
+   airflow version
    ```
