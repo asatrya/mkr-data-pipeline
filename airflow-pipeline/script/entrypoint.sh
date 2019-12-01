@@ -23,6 +23,8 @@ airflow variables --set DATALAKE_MINIO_ENDPOINT $DATALAKE_MINIO_ENDPOINT
 airflow variables --set DATALAKE_MINIO_ACCESS_KEY $DATALAKE_MINIO_ACCESS_KEY
 airflow variables --set DATALAKE_MINIO_SECRET_KEY $DATALAKE_MINIO_SECRET_KEY
 airflow variables --set DATALAKE_MINIO_RAW_BUCKET $DATALAKE_MINIO_RAW_BUCKET
+airflow variables --set DATALAKE_MINIO_CLEANED_BUCKET $DATALAKE_MINIO_CLEANED_BUCKET
+airflow variables --set DATALAKE_MINIO_AGG_BUCKET $DATALAKE_MINIO_AGG_BUCKET
 
 # start the scheduler and webserver
 printf "Running scheduler and webserver...\n\n"
