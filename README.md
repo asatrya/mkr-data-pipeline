@@ -73,6 +73,8 @@ For local development purpose, you can setup local Airflow with other dependenci
    airflow variables --set DATALAKE_MINIO_ACCESS_KEY minio
    airflow variables --set DATALAKE_MINIO_SECRET_KEY minio123
    airflow variables --set DATALAKE_MINIO_RAW_BUCKET raw-data
+   airflow variables --set DATALAKE_MINIO_CLEANED_BUCKET cleaned-data
+   airflow variables --set DATALAKE_MINIO_AGG_BUCKET agg-data
    ```
 
 1. Install Airflow and Python dependencies

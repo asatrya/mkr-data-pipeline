@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 
 from src.extract_data import extract_data
-# from src.transform_data import transform_data
+from src.clean_data import clean_data
 # from src.load_table import load_table
 import requests
 import json
@@ -39,12 +39,12 @@ task1 = PythonOperator(
     dag=dag)
 
 
-# # Second task is to transform the data
-# task2 = PythonOperator(
-#     task_id='transform_data',
-#     provide_context=True,
-#     python_callable=transform_data,
-#     dag=dag)
+# Second task is to clean the data
+task2 = PythonOperator(
+    task_id='clean_data',
+    provide_context=True,
+    python_callable=clean_data,
+    dag=dag)
 
 # # Third task is to load data into the database.
 # task3 = PythonOperator(
@@ -53,6 +53,5 @@ task1 = PythonOperator(
 #     python_callable=load_table,
 #     dag=dag)
 
-# Set task1 "upstream" of task2
-# task1 must be completed before task2 can be started
-# task1 >> task2 >> task3
+# set dependency
+task1 >> task2 #>> task3
