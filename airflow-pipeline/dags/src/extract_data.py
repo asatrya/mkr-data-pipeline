@@ -1,65 +1,106 @@
 from airflow.models import Variable
-from airflow.contrib.hooks.gcs_hook import GoogleCloudStorageHook
 
-import requests
-import json
-from datetime import datetime
+from minio import Minio
+from minio.error import ResponseError
+from minio.error import InvalidBucketError
+from minio.error import NoSuchKey
+
 import os
+import shutil
+import pandas as pd
 import logging
 
+SOURCE_MINIO_ENDPOINT = Variable.get('SOURCE_MINIO_ENDPOINT')
+SOURCE_MINIO_ACCESS_KEY = Variable.get('SOURCE_MINIO_ACCESS_KEY')
+SOURCE_MINIO_SECRET_KEY = Variable.get('SOURCE_MINIO_SECRET_KEY')
+SOURCE_MINIO_BUCKET = Variable.get('SOURCE_MINIO_BUCKET')
 
-API_KEY = Variable.get('OPEN_WEATHER_API_KEY')
-GCS_BUCKET = Variable.get('GCS_BUCKET')
+DATALAKE_MINIO_ENDPOINT = Variable.get('DATALAKE_MINIO_ENDPOINT')
+DATALAKE_MINIO_ACCESS_KEY = Variable.get('DATALAKE_MINIO_ACCESS_KEY')
+DATALAKE_MINIO_SECRET_KEY = Variable.get('DATALAKE_MINIO_SECRET_KEY')
+DATALAKE_MINIO_RAW_BUCKET = Variable.get('DATALAKE_MINIO_RAW_BUCKET')
 
-def get_weather(**kwargs):
+
+def extract_data(**kwargs):
     """
-    Query openweathermap.com's API and to get the weather for
-    Jakarta, ID and then dump the json to the /src/data/ directory
-    with the file name "<today's date>.json"
+    Download XLSX file from data source bucket 
+    and store it on data lake bucket in CSV format
     """
 
-    # My API key is defined in my config.py file.
-    paramaters = {'q': 'Jakarta, ID', 'appid': API_KEY}
-    logging.info("API_KEY={}".format(API_KEY))
+    # logs information
+    execution_date = kwargs["execution_date"]
+    logging.info("Execution datetime={}".format(execution_date))
 
-    result = requests.get(
-        "http://api.openweathermap.org/data/2.5/weather?", paramaters)
-
-    # If the API call was sucessful, get the json and dump it to a file with
-    # today's date as the title.
-    if result.status_code == 200:
-
-        # Get the json data
-        json_data = result.json()
-        logging.info("Response from API: {}".format(json_data))
-
-        # Save output file
-        file_name = str(kwargs["execution_date"]) + '.json'
-        dir_path = os.path.join(os.path.dirname(__file__),
+    # temp data directory
+    temp_dir_path = os.path.join(os.path.dirname(__file__),
                                 '..', '..',
-                                'data',
+                                'temp-data',
                                 kwargs["dag"].dag_id,
-                                kwargs["task"].task_id)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        tot_name = os.path.join(dir_path, file_name)
-        logging.info("Will write output to {}".format(tot_name))
+                                kwargs["task"].task_id,
+                                str(execution_date))
+    if not os.path.exists(temp_dir_path):
+            os.makedirs(temp_dir_path)
+    logging.info("Will write output to {}".format(temp_dir_path))
 
-        with open(tot_name, 'w') as outputfile:
-            json.dump(json_data, outputfile)
-            logging.info("Successfully write local output file")
+    # connect to source object storage
+    sourceMinioClient = Minio(SOURCE_MINIO_ENDPOINT,
+                              access_key=SOURCE_MINIO_ACCESS_KEY,
+                              secret_key=SOURCE_MINIO_SECRET_KEY,
+                              secure=False)
 
-        # upload to GCS
-        gcs = GoogleCloudStorageHook('gcp_airflow_lab')
-        gcs_dest_object = os.path.join(kwargs["dag"].dag_id, kwargs["task"].task_id, file_name)
-        gcs.upload(GCS_BUCKET, 
-                gcs_dest_object, 
-                tot_name, 
-                mime_type='application/octet-stream')
-        logging.info("Successfully write output file to GCS: gs://{}/{}".format(GCS_BUCKET, gcs_dest_object))
-    else:
+    # connect to data lake object storage
+    dataLakeMinioClient = Minio(DATALAKE_MINIO_ENDPOINT,
+                                access_key=DATALAKE_MINIO_ACCESS_KEY,
+                                secret_key=DATALAKE_MINIO_SECRET_KEY,
+                                secure=False)
+
+    try:
+        # check if source bucket exist
+        if sourceMinioClient.bucket_exists(SOURCE_MINIO_BUCKET):
+            logging.info("[DATA-SOURCE] Bucket `{}` is exist".format(SOURCE_MINIO_BUCKET))
+        else:
+            raise ValueError('"[DATA-SOURCE] Bucket is not exist"')
+
+        # download XLSX file
+        file_name = 'bank.xlsx'
+        destination = '{}/{}'.format(temp_dir_path, file_name)
+        data = sourceMinioClient.get_object(SOURCE_MINIO_BUCKET, file_name)
+        with open(destination, 'wb') as file_data:
+            for d in data.stream(32*1024):
+                file_data.write(d)
+            logging.info("[DATA-SOURCE] Successfully downloaded file from `{}/{}` to `{}`".format(
+                SOURCE_MINIO_BUCKET, file_name, destination))
+
+        # add to pandas dataframe
+        df = pd.read_excel(destination, sheet_name='Sheet1')
+        logging.info("Successfully read data from {}".format(destination))
+        df.to_csv(destination + ".csv")
+        logging.info("Successfully save data to {}".format(
+            destination + ".csv"))
+
+        # store to data lake
+        if dataLakeMinioClient.bucket_exists(DATALAKE_MINIO_RAW_BUCKET):
+            logging.info("[DATA-LAKE] Bucket `{}` is exist".format(
+                DATALAKE_MINIO_RAW_BUCKET))
+        else:
+            logging.info("[DATA-LAKE] Bucket `{}` is not exist, will attempt to create".format(
+                DATALAKE_MINIO_RAW_BUCKET))
+            dataLakeMinioClient.make_bucket(DATALAKE_MINIO_RAW_BUCKET)
+            logging.info("[DATA-LAKE] Bucket `{}` is created".format(
+                DATALAKE_MINIO_RAW_BUCKET))
+
+        object_name = "{}_{}.csv".format(file_name, execution_date)
+        dataLakeMinioClient.fput_object(
+            DATALAKE_MINIO_RAW_BUCKET, object_name, destination + '.csv', content_type='application/csv')
+        logging.info("[DATA-LAKE] Successfully stored `{}`".format(object_name))
+
+        # temp-data cleanup
+        shutil.rmtree(temp_dir_path)
+        logging.info("Delete directory `{}`".format(temp_dir_path))
+
+    except InvalidBucketError as err:
+        raise ValueError('"Error in bucket name"')
+    except NoSuchKey as err:
+        raise ValueError('"Object not found"')
+    except ResponseError as err:
         raise ValueError('"Error In API call."')
-
-
-if __name__ == "__main__":
-    get_weather()

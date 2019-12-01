@@ -12,6 +12,9 @@ Session.vim
 *.tmPreferences.cache
 *.stTheme.cache
 
+# VSCode
+.vscode
+
 # workspace files are user-specific
 *.sublime-workspace
 
@@ -30,6 +33,18 @@ venv
 unittests.cfg
 airflow.db
 airflow-pipeline/logs
+airflow-scheduler.err
+airflow-scheduler.log
+airflow-scheduler.out
+airflow-scheduler.pid
+airflow-webserver-monitor.pid
+airflow-webserver.err
+airflow-webserver.log
+airflow-webserver.out
+airflow-webserver.pid
 
 # Minio
 .minio.sys
+
+# Pipeline
+# temp-data/

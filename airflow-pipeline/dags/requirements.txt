@@ -1,4 +1,6 @@
-apache-airflow[postgres,gcp]
+# apache-airflow[postgres,gcp]==1.10.6
 psycopg2
 sqlalchemy
-sqlalchemy_utils
+minio
+pandas
+xlrd

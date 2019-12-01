@@ -14,6 +14,7 @@ This repository contains a Dockerized version of Apache Airflow running on Local
    ```sh
    nano .env
    ```
+
 2) Locate your DAG files on `./dags` folder
 
 3) Build and run Docker container
@@ -60,6 +61,20 @@ For local development purpose, you can setup local Airflow with other dependenci
    source venv/bin/activate
    ```
 
+1. Set Airflow Variables
+
+   ```sh
+   airflow variables --set SOURCE_MINIO_ENDPOINT localhost:9001
+   airflow variables --set SOURCE_MINIO_ACCESS_KEY minio
+   airflow variables --set SOURCE_MINIO_SECRET_KEY minio123
+   airflow variables --set SOURCE_MINIO_BUCKET source-bucket
+
+   airflow variables --set DATALAKE_MINIO_ENDPOINT localhost:9002
+   airflow variables --set DATALAKE_MINIO_ACCESS_KEY minio
+   airflow variables --set DATALAKE_MINIO_SECRET_KEY minio123
+   airflow variables --set DATALAKE_MINIO_RAW_BUCKET raw-data
+   ```
+
 1. Install Airflow and Python dependencies
 
    ```sh
@@ -77,4 +92,11 @@ For local development purpose, you can setup local Airflow with other dependenci
 
    ```sh
    airflow version
+   ```
+
+1. Run Airflow scheduler and webserver
+
+   ```sh
+   airflow scheduler -D
+   airflow webserver -D
    ```

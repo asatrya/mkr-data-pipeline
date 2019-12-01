@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 
-from src.get_weather import get_weather
-from src.transform_data import transform_data
-from src.load_table import load_table
+from src.extract_data import extract_data
+# from src.transform_data import transform_data
+# from src.load_table import load_table
 import requests
 import json
 import os
@@ -23,19 +23,19 @@ default_args = {
 
 
 # Define the dag, the start date and how frequently it runs.
-# I chose the dag to run everday by using 1440 minutes.
+# The dag to run every 2 hours, starting at 02:00 everyday
 dag = DAG(
-    dag_id='weatherDag',
+    dag_id='transactionDag',
     default_args=default_args,
-    start_date=datetime(2017, 8, 24),
-    schedule_interval=timedelta(minutes=1440))
+    start_date=datetime(2015, 1, 1, 0, 0),
+    schedule_interval=timedelta(hours=2))
 
 
-# First task is to query get the weather from openweathermap.org.
+# First task is to download XLSX file and extract its data
 task1 = PythonOperator(
-    task_id='get_weather',
+    task_id='extract_data',
     provide_context=True,
-    python_callable=get_weather,
+    python_callable=extract_data,
     dag=dag)
 
 
