@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 
 from src.extract_data import extract_data
 from src.clean_data import clean_data
-# from src.load_table import load_table
+from src.aggregate_data import aggregate_data
 import requests
 import json
 import os
@@ -46,12 +46,12 @@ task2 = PythonOperator(
     python_callable=clean_data,
     dag=dag)
 
-# # Third task is to load data into the database.
-# task3 = PythonOperator(
-#     task_id='load_table',
-#     provide_context=True,
-#     python_callable=load_table,
-#     dag=dag)
+# Third task is to load data into the database.
+task3 = PythonOperator(
+    task_id='aggregate_data',
+    provide_context=True,
+    python_callable=aggregate_data,
+    dag=dag)
 
 # set dependency
-task1 >> task2 #>> task3
+task1 >> task2 >> task3
