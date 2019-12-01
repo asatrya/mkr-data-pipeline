@@ -4,3 +4,4 @@ sqlalchemy
 minio
 pandas
 xlrd
+pymysql
