@@ -36,3 +36,17 @@ services:
             MINIO_ACCESS_KEY: minio
             MINIO_SECRET_KEY: minio123
         command: server /data
+
+    data_lake:
+        image: minio/minio:RELEASE.2019-10-12T01-39-57Z
+        volumes:
+            - vol-data-lake:/data
+        ports:
+            - "9002:9000"
+        environment:
+            MINIO_ACCESS_KEY: minio
+            MINIO_SECRET_KEY: minio123
+        command: server /data
+
+volumes: 
+    vol-data-lake:
